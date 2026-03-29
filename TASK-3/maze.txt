@@ -1,1 +1,37 @@
+🌀 Infinite Maze Generator
 
+A procedurally generated, never-ending puzzle game built with HTML5, CSS3, and JavaScript.
+
+🚀 Features
+
+Procedural Generation: Uses the Recursive Backtracker (DFS) algorithm to ensure every maze is unique and solvable.
+Infinite Levels: The game automatically generates a new, increasingly complex maze every time you reach the goal.
+Difficulty Scaling: The grid size expands every 5 levels, providing a continuous challenge.
+Modern UI: A sleek, dark-themed interface featuring Glassmorphism and CSS backdrops.
+Responsive Controls: Supports both WASD and Arrow Keys for seamless navigation.
+
+🛠️ Tech Stack
+HTML5: Structured using semantic elements and a high-performance <canvas>.
+CSS3: Styled with Flexbox, Backdrop-filters, and transitions for a polished feel.
+JavaScript: Pure ES6+ logic for the generation algorithm and player movement.
+
+🕹️ How to Play
+Start: You begin at the top-left corner (Blue square).
+Navigate: Use your keyboard to find the path through the maze.
+Goal: Reach the green square at the bottom-right to advance to the next level.
+Progression: Watch the level counter rise as the mazes get larger and more intricate!
+
+🧠 The Algorithm
+The core of this project is the Recursive Backtracker. 
+It works by:
+Choosing a starting cell and marking it as visited.
+Randomly selecting an unvisited neighbor.
+Removing the wall between the current cell and the neighbor.
+Pushing the current cell to a stack and making the neighbor the new current cell.
+If no neighbors are left, popping from the stack to backtrack.
+
+📂 Project Structure
+Plaintext
+├── maze.html   # Main structure and Canvas element
+├── maze.css    # Glassmorphism UI and layout styling
+└── maze.js    # Maze generation and game logic
