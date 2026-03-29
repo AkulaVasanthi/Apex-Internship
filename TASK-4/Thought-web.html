@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thought Web — Living Visualizer</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Inconsolata:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #03060f;
+  --text: #c8d8f0;
+  --muted: rgba(200,216,240,0.3);
+  --border: rgba(100,180,255,0.08);
+}
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inconsolata', monospace;
+  overflow: hidden;
+  transition: background 3s ease;
+}
+
+/* noise grain */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0; opacity: 0.5;
+}
+
+canvas {
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 1;
+}
+
+/* ── HEADER ── */
+#header {
+  position: fixed; top: 0; left: 0; right: 0;
+  padding: 22px 32px;
+  display: flex; align-items: center; justify-content: space-between;
+  z-index: 20;
+  background: linear-gradient(to bottom, rgba(3,6,15,0.9) 0%, transparent 100%);
+}
+
+#logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 1rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(200,216,240,0.4);
+}
+
+#stats {
+  display: flex; gap: 24px; align-items: center;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(200,216,240,0.2);
+}
+
+#stats span { transition: color 0.5s; }
+#stats .highlight { color: rgba(200,216,240,0.6); }
+
+/* ── REACTION BANNER ── */
+#reaction {
+  position: fixed;
+  top: 68px; left: 50%; transform: translateX(-50%);
+  z-index: 20;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.95rem;
+  letter-spacing: 0.1em;
+  color: rgba(200,216,240,0.0);
+  text-align: center;
+  transition: color 1.5s ease, opacity 1.5s ease;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+#reaction.visible { color: rgba(200,216,240,0.55); }
+#reaction.fading  { color: rgba(200,216,240,0.0);  }
+
+/* ── NODES ── */
+.node {
+  position: fixed;
+  z-index: 5;
+  pointer-events: all;
+  cursor: grab;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 14px 13px 11px;
+  transform: translate(-50%, -50%) scale(0);
+  transition: box-shadow 0.6s, border-radius 0.9s, border-color 0.6s;
+  animation: nodeIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  user-select: none;
+  word-break: break-word;
+}
+.node:active { cursor: grabbing; }
+
+@keyframes nodeIn {
+  from { transform: translate(-50%,-50%) scale(0) rotate(-5deg); opacity:0; }
+  to   { transform: translate(-50%,-50%) scale(1) rotate(0deg);  opacity:1; }
+}
+
+.node-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  line-height: 1.3;
+  pointer-events: none;
+}
+.node-emotion {
+  font-family: 'Inconsolata', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.55;
+  margin-top: 5px;
+  pointer-events: none;
+}
+.node-sub {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.6rem;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* pulse ring */
+.node::after {
+  content: '';
+  position: absolute; inset: -3px;
+  border-radius: inherit;
+  border: 1px solid currentColor;
+  opacity: 0;
+  animation: ring var(--pulse-speed, 3s) ease-out infinite;
+}
+@keyframes ring {
+  0%   { opacity: 0.35; transform: scale(1);   }
+  100% { opacity: 0;    transform: scale(1.55); }
+}
+
+/* ── LOADING OVERLAY ── */
+.node.loading {
+  opacity: 0.5;
+  animation: nodeIn 0.7s cubic-bezier(0.34,1.56,0.64,1) forwards, shimmer 1.2s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0%,100% { opacity: 0.4; }
+  50%      { opacity: 0.7; }
+}
+
+/* ── INPUT PANEL ── */
+#panel {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  padding: 20px 32px 32px;
+  z-index: 20;
+  background: linear-gradient(to top, rgba(3,6,15,0.95) 70%, transparent 100%);
+  display: flex; flex-direction: column; gap: 10px; align-items: center;
+}
+
+#emotion-live {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 0.82rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  transition: color 0.5s;
+  min-height: 1.1em;
+  display: flex; align-items: center; gap: 10px;
+}
+
+#emotion-live .dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+  animation: dotPulse 1.5s ease-in-out infinite;
+}
+@keyframes dotPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.8)} }
+
+#input-row {
+  display: flex;
+  width: min(680px, 92vw);
+  gap: 10px;
+}
+
+#thought-input {
+  flex: 1;
+  background: rgba(5,10,22,0.9);
+  border: 1px solid rgba(100,180,255,0.1);
+  border-radius: 3px;
+  color: var(--text);
+  font-family: 'Inconsolata', monospace;
+  font-size: 1rem;
+  padding: 13px 18px;
+  outline: none;
+  backdrop-filter: blur(16px);
+  transition: border-color 0.4s, box-shadow 0.4s, caret-color 0.4s;
+  caret-color: var(--muted);
+}
+#thought-input::placeholder { color: rgba(200,216,240,0.2); }
+#thought-input:disabled { opacity: 0.5; cursor: wait; }
+
+#add-btn {
+  background: transparent;
+  border: 1px solid rgba(100,180,255,0.15);
+  border-radius: 3px;
+  color: rgba(200,216,240,0.5);
+  font-family: 'Inconsolata', monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  padding: 0 20px;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+#add-btn:hover:not(:disabled) { background: rgba(100,180,255,0.07); color: var(--text); border-color: rgba(100,180,255,0.4); }
+#add-btn:disabled { opacity: 0.35; cursor: wait; }
+
+#hints {
+  display: flex; gap: 20px;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(200,216,240,0.13);
+}
+
+/* ── LEGEND ── */
+#legend {
+  position: fixed;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.leg {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: rgba(200,216,240,0.2);
+  transition: color 0.4s;
+}
+.leg-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+}
+.leg.active { color: rgba(200,216,240,0.55); }
+
+/* ── MEMORY PANEL ── */
+#memory-panel {
+  position: fixed;
+  left: 24px; top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  display: flex; flex-direction: column; gap: 6px;
+  max-width: 140px;
+}
+.memory-line {
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  color: rgba(200,216,240,0.18);
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+.memory-line span { color: rgba(200,216,240,0.45); }
+
+/* ── CLEAR ── */
+#clear-btn {
+  position: fixed; top: 22px; right: 32px;
+  z-index: 30;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 3px;
+  color: rgba(200,216,240,0.2);
+  font-family: 'Inconsolata', monospace;
+  font-size: 0.62rem; letter-spacing: 0.15em;
+  padding: 5px 12px; cursor: pointer;
+  transition: all 0.3s;
+}
+#clear-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div id="header">
+  <div id="logo">Thought Web</div>
+  <div id="stats">
+    <span id="stat-nodes">0 thoughts</span>
+    <span id="stat-dominant">—</span>
+    <span id="stat-valence">—</span>
+  </div>
+</div>
+
+<div id="reaction"></div>
+
+<div id="legend">
+  <div class="leg" data-e="joy">    <div class="leg-dot" style="background:#00ffb3"></div>joy</div>
+  <div class="leg" data-e="love">   <div class="leg-dot" style="background:#ff66aa"></div>love</div>
+  <div class="leg" data-e="wonder"> <div class="leg-dot" style="background:#ffcc44"></div>wonder</div>
+  <div class="leg" data-e="sadness"><div class="leg-dot" style="background:#4466ff"></div>sadness</div>
+  <div class="leg" data-e="fear">   <div class="leg-dot" style="background:#cc44ff"></div>fear</div>
+  <div class="leg" data-e="anger">  <div class="leg-dot" style="background:#ff3344"></div>anger</div>
+  <div class="leg" data-e="neutral"><div class="leg-dot" style="background:#88aacc"></div>neutral</div>
+</div>
+
+<div id="memory-panel">
+  <div class="memory-line">Session</div>
+  <div class="memory-line">Dominant: <span id="mp-dominant">—</span></div>
+  <div class="memory-line">Valence: <span id="mp-valence">—</span></div>
+  <div class="memory-line">Shift: <span id="mp-shift">—</span></div>
+  <div class="memory-line" id="mp-themes" style="margin-top:6px"></div>
+</div>
+
+<div id="panel">
+  <div id="emotion-live">
+    <div class="dot"></div>
+    <span id="live-label">speak your mind</span>
+  </div>
+  <div id="input-row">
+    <input id="thought-input" type="text" placeholder="type a thought and press enter…" maxlength="120" autocomplete="off" spellcheck="false">
+    <button id="add-btn">ADD →</button>
+  </div>
+  <div id="hints">
+    <span>enter to add</span>
+    <span>drag nodes</span>
+    <span>emotions cluster by resonance</span>
+    <span>web learns your pattern</span>
+  </div>
+</div>
+
+<button id="clear-btn">CLEAR WEB</button>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// STEP 1 — AI SENTIMENT ENGINE
+// ════════════════════════════════════════════════════════════════
+async function analyzeSentimentAI(text) {
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 300,
+        messages: [{
+          role: "user",
+          content: `Analyze this thought's emotional content: "${text}"
+
+Return ONLY valid JSON, no markdown, no explanation:
+{
+  "emotion": "joy|sadness|anger|fear|love|wonder|neutral",
+  "intensity": 0.0-1.0,
+  "valence": -1.0-to-1.0,
+  "arousal": 0.0-1.0,
+  "themes": ["max 3 single-word themes"],
+  "subEmotion": "one specific word",
+  "color_temp": "warm|cool|neutral"
+}`
+        }]
+      })
+    });
+    const data = await res.json();
+    const raw = data.content.map(i => i.text||"").join("");
+    return JSON.parse(raw.replace(/```json|```/g,"").trim());
+  } catch {
+    // Intelligent fallback: simple lexicon
+    return fallbackAnalyze(text);
+  }
+}
+
+function fallbackAnalyze(text) {
+  const t = text.toLowerCase();
+  const map = {
+    joy:     ['happy','great','amazing','wonderful','excited','love','fantastic','joy'],
+    sadness: ['sad','lonely','miss','hurt','pain','cry','grief','lost','empty'],
+    anger:   ['angry','hate','furious','rage','frustrated','annoyed','wrong'],
+    fear:    ['afraid','scared','anxious','worried','nervous','dread','panic'],
+    love:    ['love','adore','cherish','heart','romance','tender','care','kiss'],
+    wonder:  ['wonder','curious','strange','imagine','dream','universe','mystery'],
+  };
+  for (const [emotion, words] of Object.entries(map)) {
+    if (words.some(w => t.includes(w))) {
+      return { emotion, intensity: 0.6, valence: emotion==='joy'||emotion==='love'?0.7:-0.5,
+               arousal: 0.5, themes: [], subEmotion: emotion, color_temp: 'neutral' };
+    }
+  }
+  return { emotion:'neutral', intensity:0.3, valence:0, arousal:0.2, themes:[], subEmotion:'calm', color_temp:'neutral' };
+}
+
+// ════════════════════════════════════════════════════════════════
+// EMOTION STYLE PROFILES
+// ════════════════════════════════════════════════════════════════
+const ES = {
+  joy:     { color:'#00ffb3', bg:'rgba(0,255,179,0.06)',  pulse:'2s',  borderRadius:(i)=>`${35+i*20}%`,                          shadow:(i)=>`0 0 ${14+i*22}px rgba(0,255,179,${0.28+i*0.4})` },
+  sadness: { color:'#4466ff', bg:'rgba(68,102,255,0.06)', pulse:'5.5s',borderRadius:(i)=>`${2+i*2}px`,                            shadow:(i)=>`0 ${6+i*10}px ${18+i*18}px rgba(68,102,255,${0.22+i*0.3})` },
+  anger:   { color:'#ff3344', bg:'rgba(255,51,68,0.07)',  pulse:'1s',  borderRadius:(i)=>`${i>0.5?0:2}px`,                        shadow:(i)=>`0 0 ${10+i*28}px rgba(255,51,68,${0.38+i*0.4}),0 0 ${30+i*20}px rgba(255,80,0,0.15)` },
+  fear:    { color:'#cc44ff', bg:'rgba(204,68,255,0.05)', pulse:'1.7s',borderRadius:(i)=>`${20+Math.random()*30}% ${Math.random()*40}% ${Math.random()*35}% ${Math.random()*40}%`, shadow:(i)=>`0 0 ${8+i*14}px rgba(204,68,255,${0.2+i*0.45})` },
+  love:    { color:'#ff66aa', bg:'rgba(255,102,170,0.06)',pulse:'3s',  borderRadius:()=>'50%',                                    shadow:(i)=>`0 0 ${12+i*20}px rgba(255,102,170,${0.28+i*0.4})` },
+  wonder:  { color:'#ffcc44', bg:'rgba(255,204,68,0.05)', pulse:'4s',  borderRadius:(i)=>`${8+i*12}% ${45-i*8}% ${8+i*15}% ${45-i*6}%`, shadow:(i)=>`0 0 ${14+i*18}px rgba(255,204,68,${0.22+i*0.38})` },
+  neutral: { color:'#88aacc', bg:'rgba(136,170,204,0.04)',pulse:'5s',  borderRadius:()=>'5px',                                    shadow:()=>`0 0 10px rgba(136,170,204,0.12)` },
+};
+
+// ════════════════════════════════════════════════════════════════
+// STEP 2 — PHYSICS ENGINE
+// ════════════════════════════════════════════════════════════════
+const EMOTION_DISTANCE = {
+  joy:     {joy:0,   sadness:0.9,anger:0.8,fear:0.7,love:0.2,wonder:0.3,neutral:0.5},
+  sadness: {joy:0.9, sadness:0,  anger:0.4,fear:0.3,love:0.5,wonder:0.6,neutral:0.4},
+  anger:   {joy:0.8, sadness:0.4,anger:0,  fear:0.3,love:0.7,wonder:0.6,neutral:0.5},
+  fear:    {joy:0.7, sadness:0.3,anger:0.3,fear:0,  love:0.5,wonder:0.4,neutral:0.4},
+  love:    {joy:0.2, sadness:0.5,anger:0.7,fear:0.5,love:0,  wonder:0.3,neutral:0.4},
+  wonder:  {joy:0.3, sadness:0.6,anger:0.6,fear:0.4,love:0.3,wonder:0,  neutral:0.3},
+  neutral: {joy:0.5, sadness:0.4,anger:0.5,fear:0.4,love:0.4,wonder:0.3,neutral:0},
+};
+
+function tickPhysics(nodes) {
+  const N = nodes.length;
+  for (let i = 0; i < N; i++) {
+    const a = nodes[i];
+    if (a.pinned) continue;
+    let fx = 0, fy = 0;
+
+    for (let j = 0; j < N; j++) {
+      if (i===j) continue;
+      const b = nodes[j];
+      const dx = a.x - b.x, dy = a.y - b.y;
+      const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+      const nx = dx/dist, ny = dy/dist;
+      // universal repulsion
+      const rep = 3200 / (dist*dist);
+      fx += nx*rep; fy += ny*rep;
+      // emotional attraction/extra-repulsion
+      const ed = (EMOTION_DISTANCE[a.emotion]||{})[b.emotion] ?? 0.5;
+      if (ed < 0.35) {
+        const delta = dist - 190;
+        fx -= nx * delta * 0.018;
+        fy -= ny * delta * 0.018;
+      } else if (ed > 0.72) {
+        fx += nx * 900/(dist*dist);
+        fy += ny * 900/(dist*dist);
+      }
+    }
+
+    // center gravity
+    fx += (window.innerWidth/2  - a.x) * 0.0006;
+    fy += (window.innerHeight/2 - a.y) * 0.0006;
+
+    // arousal jitter
+    if (a.arousal > 0.55) {
+      fx += (Math.random()-0.5) * a.arousal * 0.9;
+      fy += (Math.random()-0.5) * a.arousal * 0.9;
+    }
+
+    a.vx = (a.vx + fx) * 0.87;
+    a.vy = (a.vy + fy) * 0.87;
+
+    const spd = Math.sqrt(a.vx*a.vx + a.vy*a.vy);
+    if (spd > 4) { a.vx = a.vx/spd*4; a.vy = a.vy/spd*4; }
+
+    a.x += a.vx; a.y += a.vy;
+
+    const mg = 75, panH = 140;
+    if (a.x < mg) { a.x = mg; a.vx *= -0.5; }
+    if (a.x > window.innerWidth - mg) { a.x = window.innerWidth - mg; a.vx *= -0.5; }
+    if (a.y < 75) { a.y = 75; a.vy *= -0.5; }
+    if (a.y > window.innerHeight - panH) { a.y = window.innerHeight - panH; a.vy *= -0.5; }
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// STEP 3 — LIVING CONNECTIONS
+// ════════════════════════════════════════════════════════════════
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+window.addEventListener('resize', resizeCanvas); resizeCanvas();
+
+function hexAlpha(hex, a) {
+  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${Math.min(1,Math.max(0,a))})`;
+}
+
+class Connection {
+  constructor(a, b) {
+    this.a = a; this.b = b;
+    this.strength = 0;
+    this.phase = Math.random() * Math.PI * 2;
+    this.sharedThemes = (b.themes||[]).filter(t => (a.themes||[]).includes(t));
+    const ed = (EMOTION_DISTANCE[a.emotion]||{})[b.emotion] ?? 0.5;
+    this.type = this.sharedThemes.length > 0 ? 'theme'
+              : ed < 0.3 ? 'resonance'
+              : ed > 0.7 ? 'tension' : 'echo';
+    this.cpOffX = (Math.random()-0.5) * 120;
+    this.cpOffY = (Math.random()-0.5) * 120;
+  }
+
+  update() {
+    this.phase += 0.025;
+    const dx=this.b.x-this.a.x, dy=this.b.y-this.a.y;
+    const dist = Math.sqrt(dx*dx+dy*dy);
+    const proximity = Math.max(0, 1 - dist/480);
+    const target = proximity * (this.type==='resonance'?1.0:this.type==='theme'?0.9:this.type==='tension'?0.35:0.55);
+    this.strength += (target - this.strength) * 0.018;
+    return dist < 500 && this.strength > 0.015;
+  }
+
+  draw(ctx) {
+    const pulse = 0.68 + 0.32 * Math.sin(this.phase);
+    const alpha = this.strength * pulse;
+    const ca = ES[this.a.emotion].color, cb = ES[this.b.emotion].color;
+    const mx=(this.a.x+this.b.x)/2, my=(this.a.y+this.b.y)/2;
+    const cpx = mx + this.cpOffX * (this.type==='tension'?-0.8:0.5);
+    const cpy = my + this.cpOffY * (this.type==='tension'?-0.8:0.5);
+
+    const grad = ctx.createLinearGradient(this.a.x,this.a.y,this.b.x,this.b.y);
+    grad.addColorStop(0, hexAlpha(ca, alpha));
+    grad.addColorStop(1, hexAlpha(cb, alpha));
+
+    ctx.beginPath();
+    ctx.moveTo(this.a.x, this.a.y);
+    ctx.quadraticCurveTo(cpx, cpy, this.b.x, this.b.y);
+
+    if (this.type==='theme') {
+      // glow layer
+      ctx.lineWidth = 5 + this.strength*5;
+      ctx.strokeStyle = hexAlpha(ca, alpha*0.2);
+      ctx.setLineDash([]);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(this.a.x, this.a.y);
+      ctx.quadraticCurveTo(cpx, cpy, this.b.x, this.b.y);
+      ctx.lineWidth = 1.5 + this.strength*1.5;
+    } else if (this.type==='resonance') {
+      ctx.lineWidth = 1.2 + this.strength*2;
+      ctx.setLineDash([]);
+    } else if (this.type==='tension') {
+      ctx.lineWidth = 0.7;
+      ctx.setLineDash([2,10]);
+    } else {
+      ctx.lineWidth = 0.6;
+      ctx.setLineDash([5,9]);
+    }
+
+    ctx.strokeStyle = grad;
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // theme label
+    if (this.type==='theme' && this.strength>0.35 && this.sharedThemes[0]) {
+      ctx.font = '8px Inconsolata, monospace';
+      ctx.fillStyle = hexAlpha(ca, alpha*0.6);
+      ctx.textAlign = 'center';
+      ctx.fillText(this.sharedThemes[0], cpx, cpy-7);
+    }
+
+    // flowing particle on resonance
+    if (this.type==='resonance' && this.strength>0.45) {
+      const t = ((Date.now() % 2400) / 2400);
+      const px = (1-t)*(1-t)*this.a.x + 2*(1-t)*t*cpx + t*t*this.b.x;
+      const py = (1-t)*(1-t)*this.a.y + 2*(1-t)*t*cpy + t*t*this.b.y;
+      ctx.beginPath();
+      ctx.arc(px, py, 2, 0, Math.PI*2);
+      ctx.fillStyle = hexAlpha(ca, alpha*0.9);
+      ctx.fill();
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// STEP 4 — EMOTIONAL MEMORY
+// ════════════════════════════════════════════════════════════════
+class EmotionalMemory {
+  constructor() {
+    this.history = [];
+    this.themeCounts = {};
+    this.emotionCounts = {joy:0,sadness:0,anger:0,fear:0,love:0,wonder:0,neutral:0};
+    this.valenceAvg = 0;
+    this.shift = null;
+  }
+
+  record(analysis) {
+    this.history.push({ ...analysis, ts: Date.now() });
+    this.emotionCounts[analysis.emotion]++;
+    this.valenceAvg = this.valenceAvg * 0.78 + analysis.valence * 0.22;
+    (analysis.themes||[]).forEach(t => { this.themeCounts[t] = (this.themeCounts[t]||0)+1; });
+
+    if (this.history.length >= 3) {
+      const recent = this.history.slice(-3);
+      const delta = recent[2].valence - recent[0].valence;
+      this.shift = Math.abs(delta) > 0.55 ? (delta>0 ? 'brightening':'darkening') : null;
+    }
+
+    return this.reaction();
+  }
+
+  get dominant() {
+    return Object.entries(this.emotionCounts).sort((a,b)=>b[1]-a[1])[0][0];
+  }
+
+  get recurringThemes() {
+    return Object.entries(this.themeCounts).filter(([,c])=>c>=2).sort((a,b)=>b[1]-a[1]).map(([t])=>t);
+  }
+
+  reaction() {
+    const n = this.history.length;
+    if (n < 3) return null;
+    if (this.shift === 'darkening') return "your thoughts are growing heavier";
+    if (this.shift === 'brightening') return "something is lifting";
+    if (this.recurringThemes.length && n >= 4) return `"${this.recurringThemes[0]}" keeps returning`;
+    if (this.emotionCounts[this.dominant] >= 4) {
+      return {joy:"joy is your current gravity",sadness:"you keep returning here",anger:"there is fire beneath these thoughts",fear:"the uncertainty is palpable",love:"love threads through everything",wonder:"your mind reaches outward",neutral:"you observe without attachment"}[this.dominant];
+    }
+    return null;
+  }
+
+  atmosphere() {
+    const atm = {
+      joy:    ['#001a0d','#00120a'], sadness:['#020510','#020410'],
+      anger:  ['#150304','#100203'], fear:   ['#0d0015','#080010'],
+      love:   ['#150008','#0f0006'], wonder: ['#0d0900','#0a0700'],
+      neutral:['#03060f','#040710'],
+    };
+    return atm[this.dominant] || atm.neutral;
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// ORCHESTRATOR — ties all 4 steps together
+// ════════════════════════════════════════════════════════════════
+const nodes = [];
+const connections = new Map();
+const memory = new EmotionalMemory();
+let nextId = 0;
+let animRunning = true;
+
+function syncConnections() {
+  for (let i=0; i<nodes.length; i++) {
+    for (let j=i+1; j<nodes.length; j++) {
+      const key = `${nodes[i].id}-${nodes[j].id}`;
+      if (!connections.has(key)) connections.set(key, new Connection(nodes[i], nodes[j]));
+    }
+  }
+}
+
+function animLoop() {
+  if (!animRunning) return;
+  tickPhysics(nodes);                        // STEP 2: physics
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for (const [key,conn] of connections) {    // STEP 3: connections
+    const alive = conn.update();
+    if (!alive) { connections.delete(key); continue; }
+    conn.draw(ctx);
+  }
+  nodes.forEach(n => {                       // sync DOM ↔ physics pos
+    if (n.el && !n.pinned) {
+      n.el.style.left = n.x + 'px';
+      n.el.style.top  = n.y + 'px';
+    }
+  });
+  requestAnimationFrame(animLoop);
+}
+animLoop();
+
+// ── CREATE VISUAL NODE ──
+function createNodeEl(node) {
+  const style = ES[node.emotion];
+  const size = 88 + node.intensity * 55;
+
+  const el = document.createElement('div');
+  el.className = 'node';
+  el.style.cssText = `
+    left:${node.x}px; top:${node.y}px;
+    width:${size}px; min-height:${size}px;
+    background:${style.bg};
+    border:1px solid ${style.color}44;
+    border-radius:${style.borderRadius(node.intensity)};
+    box-shadow:${style.shadow(node.intensity)};
+    color:${style.color};
+    --pulse-speed:${style.pulse};
+    font-size:${0.78+node.intensity*0.25}rem;
+  `;
+
+  el.innerHTML = `
+    <span class="node-text">${node.text}</span>
+    <span class="node-emotion">${node.emotion}</span>
+    <span class="node-sub">${node.subEmotion||''}</span>
+  `;
+
+  makeDraggable(el, node);
+  document.body.appendChild(el);
+  node.el = el;
+  node.size = size;
+}
+
+function makeDraggable(el, node) {
+  let drag = false, ox=0, oy=0;
+  el.addEventListener('mousedown', e => {
+    drag=true; node.pinned=true;
+    ox=e.clientX-node.x; oy=e.clientY-node.y;
+    el.style.zIndex=15; e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!drag) return;
+    node.x=e.clientX-ox; node.y=e.clientY-oy;
+    el.style.left=node.x+'px'; el.style.top=node.y+'px';
+  });
+  document.addEventListener('mouseup', () => {
+    if (!drag) return;
+    drag=false; node.pinned=false; el.style.zIndex=5;
+    // release with a small velocity burst
+    node.vx=(Math.random()-0.5)*2; node.vy=(Math.random()-0.5)*2;
+  });
+  // touch
+  el.addEventListener('touchstart', e=>{
+    drag=true; node.pinned=true;
+    ox=e.touches[0].clientX-node.x; oy=e.touches[0].clientY-node.y;
+  },{passive:true});
+  document.addEventListener('touchmove', e=>{
+    if(!drag)return;
+    node.x=e.touches[0].clientX-ox; node.y=e.touches[0].clientY-oy;
+    el.style.left=node.x+'px'; el.style.top=node.y+'px';
+  },{passive:true});
+  document.addEventListener('touchend', ()=>{ drag=false; node.pinned=false; });
+}
+
+// ── SHOW REACTION ──
+let reactionTimer;
+function showReaction(msg) {
+  if (!msg) return;
+  const el = document.getElementById('reaction');
+  el.textContent = msg;
+  el.className = 'visible';
+  clearTimeout(reactionTimer);
+  reactionTimer = setTimeout(() => { el.className = 'fading'; }, 4000);
+}
+
+// ── UPDATE UI ──
+function updateUI() {
+  const dom = memory.dominant;
+  const v = memory.valenceAvg;
+  document.getElementById('stat-nodes').textContent = `${nodes.length} thought${nodes.length!==1?'s':''}`;
+  document.getElementById('stat-dominant').textContent = dom !== 'neutral' ? dom : '—';
+  document.getElementById('stat-valence').textContent = v > 0.2 ? 'positive' : v < -0.2 ? 'negative' : 'neutral';
+  document.getElementById('mp-dominant').textContent = dom;
+  document.getElementById('mp-valence').textContent = v.toFixed(2);
+  document.getElementById('mp-shift').textContent = memory.shift || '—';
+  const rt = memory.recurringThemes.slice(0,3);
+  document.getElementById('mp-themes').innerHTML = rt.length ? 'Themes:<br>' + rt.map(t=>`<span>${t}</span>`).join(', ') : '';
+
+  // highlight active legend item
+  document.querySelectorAll('.leg').forEach(l => {
+    l.classList.toggle('active', l.dataset.e === dom);
+  });
+
+  // atmosphere shift (Step 4)
+  const [bg1,bg2] = memory.atmosphere();
+  document.body.style.background = `radial-gradient(ellipse at 35% 55%, ${bg2}, ${bg1})`;
+}
+
+// ════════════════════════════════════════════════════════════════
+// MAIN — ADD THOUGHT (the full pipeline)
+// ════════════════════════════════════════════════════════════════
+const input = document.getElementById('thought-input');
+const addBtn = document.getElementById('add-btn');
+
+async function addThought(text) {
+  if (!text.trim() || input.disabled) return;
+  input.disabled = true;
+  addBtn.disabled = true;
+
+  // Spawn a loading placeholder node
+  const tmpNode = {
+    id: nextId++, text, emotion:'neutral', intensity:0.3,
+    valence:0, arousal:0.3, themes:[], subEmotion:'…',
+    x: 120 + Math.random()*(window.innerWidth-240),
+    y: 90  + Math.random()*(window.innerHeight-230),
+    vx:(Math.random()-0.5)*1.5, vy:(Math.random()-0.5)*1.5,
+    pinned:false, el:null, size:90
+  };
+
+  const tmpEl = document.createElement('div');
+  tmpEl.className = 'node loading';
+  tmpEl.style.cssText = `left:${tmpNode.x}px;top:${tmpNode.y}px;width:90px;min-height:90px;background:rgba(100,180,255,0.05);border:1px solid rgba(100,180,255,0.15);border-radius:6px;color:rgba(100,180,255,0.4);font-size:0.78rem;`;
+  tmpEl.innerHTML = `<span class="node-text" style="font-family:'Cormorant Garamond',serif">${text}</span><span class="node-emotion">analyzing…</span>`;
+  document.body.appendChild(tmpEl);
+  tmpNode.el = tmpEl;
+
+  // STEP 1: AI analysis
+  const analysis = await analyzeSentimentAI(text);
+  Object.assign(tmpNode, analysis);
+
+  // STEP 4: memory
+  const reaction = memory.record(analysis);
+
+  // Replace loading node with styled node
+  tmpEl.remove();
+  nodes.push(tmpNode);
+  createNodeEl(tmpNode);
+
+  // STEP 3: sync connections
+  syncConnections();
+
+  updateUI();
+  showReaction(reaction);
+
+  input.value = '';
+  input.disabled = false;
+  addBtn.disabled = false;
+  input.focus();
+
+  // reset live preview
+  document.getElementById('live-label').textContent = 'speak your mind';
+  document.getElementById('emotion-live').style.color = 'var(--muted)';
+  input.style.borderColor = '';
+}
+
+// live preview while typing
+input.addEventListener('input', () => {
+  const val = input.value.trim();
+  if (!val) {
+    document.getElementById('live-label').textContent = 'speak your mind';
+    document.getElementById('emotion-live').style.color = 'var(--muted)';
+    input.style.borderColor = '';
+    return;
+  }
+  const fb = fallbackAnalyze(val);
+  const style = ES[fb.emotion];
+  document.getElementById('live-label').textContent = fb.emotion;
+  document.getElementById('emotion-live').style.color = style.color;
+  input.style.borderColor = style.color + '55';
+  input.style.caretColor  = style.color;
+});
+
+input.addEventListener('keydown', e => { if (e.key==='Enter') addThought(input.value); });
+addBtn.addEventListener('click', () => addThought(input.value));
+
+document.getElementById('clear-btn').addEventListener('click', () => {
+  nodes.forEach(n => n.el?.remove());
+  nodes.length = 0;
+  connections.clear();
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  updateUI();
+});
+
+// ── SEED THOUGHTS ──
+const seeds = [
+  "i wonder what lies beyond the stars",
+  "something feels heavy tonight",
+  "love is the only thing that makes sense"
+];
+seeds.forEach((s,i) => setTimeout(() => addThought(s), 600 + i*900));
+</script>
+</body>
+</html>
