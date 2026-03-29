@@ -1,1 +1,43 @@
+🕸️ Thought Web — Living Visualizer
+An immersive, generative web application that transforms human thoughts into a dynamic, interconnected physical ecosystem. Using AI-driven sentiment analysis and a custom physics engine, it visualizes the emotional "resonance" and "tension" between your ideas in real-time.
 
+🌟 Core Concept
+The "Thought Web" treats ideas as physical entities. When you input a thought, the system analyzes its emotional weight, valence, and arousal. Each thought then finds its place in the web—attracted to similar emotions (resonance) and repelled by conflicting ones (tension).
+
+🚀 Key Features
+1. AI-Powered Sentiment Engine
+Deep Analysis: Every input is processed to determine one of seven core emotions: Joy, Love, Wonder, Sadness, Fear, Anger, or Neutral.
+Recursive Fallback: If the primary AI API is unavailable, a sophisticated lexical fallback ensures the web remains "alive."
+Atmospheric Shifting: The entire background gradient of the application subtly shifts to match the Dominant Emotion of your current session.
+
+2. Living Physics & Connections
+Force-Directed Graph: Built from scratch using a custom physics engine (Atoms/Nodes) that handles universal repulsion and center gravity.
+Connection Types:
+Resonance: Thick, glowing lines with flowing particles for similar emotions.
+Theme: Bold lines that label shared concepts (e.g., both thoughts mention "Stars").
+Tension: Dotted, vibrating lines for conflicting emotions (e.g., Joy vs. Anger).
+Interactive Interaction: Users can drag and "toss" nodes; the physics engine calculates velocity and collision boundaries in real-time.
+
+3. Emotional Memory (The Session Tracker)
+Valence Tracking: Monitors the "brightness" or "darkness" of your session.
+Shift Detection: Notifies you if your mood is "lifting" or "growing heavier" based on the last three inputs.
+Pattern Recognition: Identifies recurring themes and displays them in a "Memory Panel."
+
+🛠️ Technical Stack
+Frontend: HTML5, CSS3 (Custom Variables & Keyframe Animations).
+Graphics: HTML5 Canvas (2D Context) for high-performance line rendering.
+Logic: Vanilla JavaScript (ES6+).
+Typography: Google Fonts (Cormorant Garamond for elegance, Inconsolata for technical data).
+
+
+
+🎨 Design Aesthetic
+The UI uses Glassmorphism and a Noise Grain overlay to create a "tactile digital" feel. The legend on the right acts as a living key for the emotional color-coding:
+
+🟢 Joy: Vibrant Teal (#00ffb3)
+
+🔵 Sadness: Deep Blue (#4466ff)
+
+🔴 Anger: Sharp Red (#ff3344)
+
+🟡 Wonder: Amber Gold (#ffcc44)
