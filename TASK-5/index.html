@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ShopNova — Discover Everything</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<nav class="navbar" id="navbar">
+  <div class="nav-logo" onclick="showPage('home')">
+    <span class="logo-icon">◈</span>
+    <span class="logo-text">ShopNova</span>
+  </div>
+
+  <div class="nav-search">
+    <select id="searchCategory" class="search-cat">
+      <option value="all">All</option>
+      <option value="electronics">Electronics</option>
+      <option value="fashion">Fashion</option>
+      <option value="home">Home</option>
+      <option value="sports">Sports</option>
+      <option value="books">Books</option>
+    </select>
+    <input type="text" id="searchInput" placeholder="Search products..." oninput="handleSearch()" />
+    <button class="search-btn" onclick="handleSearch()"><i class="fas fa-search"></i></button>
+  </div>
+
+  <div class="nav-actions">
+    <div class="nav-btn" id="authBtn" onclick="toggleAuthMenu()">
+      <i class="fas fa-user-circle"></i>
+      <span id="authLabel">Sign In</span>
+    </div>
+    <div class="auth-dropdown" id="authDropdown">
+      <div id="authDropdownContent"></div>
+    </div>
+    <div class="nav-btn" onclick="showPage('cart')">
+      <i class="fas fa-shopping-cart"></i>
+      <span>Cart</span>
+      <span class="cart-badge" id="cartBadge">0</span>
+    </div>
+  </div>
+</nav>
+
+<!-- ===== PAGES CONTAINER ===== -->
+
+<!-- HOME PAGE -->
+<div id="page-home" class="page active">
+
+  <!-- Hero Banner -->
+  <section class="hero">
+    <div class="hero-content">
+      <p class="hero-sub">New Season Arrivals</p>
+      <h1 class="hero-title">Discover <em>Everything</em><br/>You Need</h1>
+      <p class="hero-desc">Millions of products. Lightning-fast delivery. Unbeatable prices.</p>
+      <button class="hero-cta" onclick="document.getElementById('products-section').scrollIntoView({behavior:'smooth'})">
+        Shop Now <i class="fas fa-arrow-right"></i>
+      </button>
+    </div>
+    <div class="hero-visual">
+      <div class="hero-card hc1">
+        <div class="hc-img">📱</div>
+        <span>Electronics</span>
+      </div>
+      <div class="hero-card hc2">
+        <div class="hc-img">👟</div>
+        <span>Fashion</span>
+      </div>
+      <div class="hero-card hc3">
+        <div class="hc-img">🏠</div>
+        <span>Home</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Category Pills -->
+  <section class="categories-strip" id="products-section">
+    <button class="cat-pill active" data-cat="all" onclick="filterByCategory('all', this)">All</button>
+    <button class="cat-pill" data-cat="electronics" onclick="filterByCategory('electronics', this)">Electronics</button>
+    <button class="cat-pill" data-cat="fashion" onclick="filterByCategory('fashion', this)">Fashion</button>
+    <button class="cat-pill" data-cat="home" onclick="filterByCategory('home', this)">Home</button>
+    <button class="cat-pill" data-cat="sports" onclick="filterByCategory('sports', this)">Sports</button>
+    <button class="cat-pill" data-cat="books" onclick="filterByCategory('books', this)">Books</button>
+  </section>
+
+  <!-- Filters & Sort Bar -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label>Price Range</label>
+      <select id="priceFilter" onchange="applyFilters()">
+        <option value="all">All Prices</option>
+        <option value="0-25">Under $25</option>
+        <option value="25-50">$25 – $50</option>
+        <option value="50-100">$50 – $100</option>
+        <option value="100-500">$100 – $500</option>
+        <option value="500+">$500+</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Sort By</label>
+      <select id="sortFilter" onchange="applyFilters()">
+        <option value="default">Featured</option>
+        <option value="low-high">Price: Low to High</option>
+        <option value="high-low">Price: High to Low</option>
+        <option value="rating">Top Rated</option>
+      </select>
+    </div>
+    <div class="results-count" id="resultsCount"></div>
+  </div>
+
+  <!-- Products Grid -->
+  <div class="products-grid" id="productsGrid"></div>
+
+  <!-- No Results -->
+  <div class="no-results" id="noResults" style="display:none">
+    <i class="fas fa-search"></i>
+    <h3>No products found</h3>
+    <p>Try a different search or filter</p>
+  </div>
+</div>
+
+<!-- PRODUCT DETAIL PAGE -->
+<div id="page-product" class="page">
+  <div class="breadcrumb">
+    <span onclick="showPage('home')" class="bc-link">Home</span>
+    <span> / </span>
+    <span id="detailCategory" class="bc-link"></span>
+    <span> / </span>
+    <span id="detailName" class="bc-current"></span>
+  </div>
+  <div class="product-detail-layout">
+    <div class="detail-gallery">
+      <img id="detailImage" src="" alt="" class="detail-main-img"/>
+      <div class="detail-thumbs" id="detailThumbs"></div>
+    </div>
+    <div class="detail-info">
+      <span class="detail-badge" id="detailBadge"></span>
+      <h1 id="detailTitle"></h1>
+      <div class="detail-rating" id="detailRating"></div>
+      <div class="detail-price" id="detailPrice"></div>
+      <p class="detail-desc" id="detailDesc"></p>
+      <div class="detail-features" id="detailFeatures"></div>
+      <div class="detail-actions">
+        <div class="qty-control">
+          <button onclick="changeQty(-1)">−</button>
+          <span id="detailQty">1</span>
+          <button onclick="changeQty(1)">+</button>
+        </div>
+        <button class="btn-primary" onclick="addDetailToCart()">
+          <i class="fas fa-cart-plus"></i> Add to Cart
+        </button>
+        <button class="btn-secondary" onclick="buyNow()">
+          Buy Now
+        </button>
+      </div>
+      <div class="detail-meta" id="detailMeta"></div>
+    </div>
+  </div>
+</div>
+
+<!-- CART PAGE -->
+<div id="page-cart" class="page">
+  <div class="page-header">
+    <h1>Shopping Cart <span id="cartItemCount"></span></h1>
+  </div>
+  <div class="cart-layout">
+    <div class="cart-items" id="cartItems"></div>
+    <div class="cart-summary" id="cartSummary"></div>
+  </div>
+</div>
+
+<!-- LOGIN PAGE -->
+<div id="page-login" class="page">
+  <div class="auth-container">
+    <div class="auth-brand">
+      <span class="logo-icon">◈</span>
+      <span class="logo-text">ShopNova</span>
+    </div>
+    <div class="auth-card">
+      <h2>Welcome Back</h2>
+      <p class="auth-sub">Sign in to your account</p>
+      <div id="loginError" class="form-error" style="display:none"></div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="loginEmail" placeholder="you@example.com" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <div class="pass-wrap">
+          <input type="password" id="loginPassword" placeholder="••••••••" />
+          <i class="fas fa-eye" onclick="togglePass('loginPassword', this)"></i>
+        </div>
+      </div>
+      <button class="btn-primary full" onclick="loginUser()">Sign In</button>
+      <p class="auth-switch">Don't have an account? <a onclick="showPage('signup')">Create one</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- SIGNUP PAGE -->
+<div id="page-signup" class="page">
+  <div class="auth-container">
+    <div class="auth-brand">
+      <span class="logo-icon">◈</span>
+      <span class="logo-text">ShopNova</span>
+    </div>
+    <div class="auth-card">
+      <h2>Create Account</h2>
+      <p class="auth-sub">Join millions of happy shoppers</p>
+      <div id="signupError" class="form-error" style="display:none"></div>
+      <div id="signupSuccess" class="form-success" style="display:none"></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>First Name</label>
+          <input type="text" id="signupFirstName" placeholder="Jane" />
+        </div>
+        <div class="form-group">
+          <label>Last Name</label>
+          <input type="text" id="signupLastName" placeholder="Doe" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="signupEmail" placeholder="you@example.com" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <div class="pass-wrap">
+          <input type="password" id="signupPassword" placeholder="Min 8 characters" oninput="checkPasswordStrength(this.value)" />
+          <i class="fas fa-eye" onclick="togglePass('signupPassword', this)"></i>
+        </div>
+        <div class="password-strength" id="passwordStrength"></div>
+      </div>
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <div class="pass-wrap">
+          <input type="password" id="signupConfirm" placeholder="Repeat password" />
+          <i class="fas fa-eye" onclick="togglePass('signupConfirm', this)"></i>
+        </div>
+      </div>
+      <div class="form-check">
+        <input type="checkbox" id="agreeTerms" />
+        <label for="agreeTerms">I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></label>
+      </div>
+      <button class="btn-primary full" onclick="signupUser()">Create Account</button>
+      <p class="auth-switch">Already have an account? <a onclick="showPage('login')">Sign in</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- PROFILE PAGE -->
+<div id="page-profile" class="page">
+  <div class="profile-layout">
+    <div class="profile-sidebar">
+      <div class="profile-avatar" id="profileAvatar"></div>
+      <h2 id="profileName"></h2>
+      <p id="profileEmail" class="profile-email-text"></p>
+      <div class="profile-upload">
+        <label for="avatarUpload" class="btn-secondary small">
+          <i class="fas fa-camera"></i> Change Photo
+        </label>
+        <input type="file" id="avatarUpload" accept="image/*" onchange="uploadAvatar(event)" style="display:none"/>
+      </div>
+      <nav class="profile-nav">
+        <button class="pnav active" data-section="orders" onclick="switchProfileSection('orders', this)">
+          <i class="fas fa-box"></i> My Orders
+        </button>
+        <button class="pnav" data-section="wishlist" onclick="switchProfileSection('wishlist', this)">
+          <i class="fas fa-heart"></i> Wishlist
+        </button>
+        <button class="pnav" data-section="settings" onclick="switchProfileSection('settings', this)">
+          <i class="fas fa-cog"></i> Settings
+        </button>
+        <button class="pnav logout-btn" onclick="logoutUser()">
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </button>
+      </nav>
+    </div>
+    <div class="profile-content">
+      <div id="section-orders" class="profile-section active">
+        <h3>My Orders</h3>
+        <div id="ordersList"></div>
+      </div>
+      <div id="section-wishlist" class="profile-section">
+        <h3>Wishlist</h3>
+        <div id="wishlistGrid" class="products-grid mini"></div>
+      </div>
+      <div id="section-settings" class="profile-section">
+        <h3>Account Settings</h3>
+        <div class="settings-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label>First Name</label>
+              <input type="text" id="settingsFirstName" />
+            </div>
+            <div class="form-group">
+              <label>Last Name</label>
+              <input type="text" id="settingsLastName" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="settingsEmail" />
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="tel" id="settingsPhone" placeholder="+1 (555) 000-0000" />
+          </div>
+          <div class="form-group">
+            <label>Address</label>
+            <textarea id="settingsAddress" rows="3" placeholder="Your shipping address"></textarea>
+          </div>
+          <button class="btn-primary" onclick="saveSettings()">Save Changes</button>
+          <div id="settingsMsg" style="margin-top:12px;display:none"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST NOTIFICATION -->
+<div id="toast" class="toast"></div>
+
+<!-- UPLOAD PRODUCT IMAGE (Floating Feature) -->
+<div class="upload-fab" onclick="document.getElementById('productImageUpload').click()" title="Upload a product image">
+  <i class="fas fa-plus"></i>
+</div>
+<input type="file" id="productImageUpload" accept="image/*" onchange="previewUploadedProduct(event)" style="display:none"/>
+
+<!-- UPLOAD PREVIEW MODAL -->
+<div id="uploadModal" class="modal-overlay" style="display:none">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeUploadModal()">×</button>
+    <h3>Product Image Preview</h3>
+    <img id="uploadPreviewImg" src="" alt="Preview" class="upload-preview"/>
+    <div class="form-group" style="margin-top:16px">
+      <label>Product Name</label>
+      <input type="text" id="uploadProductName" placeholder="Enter product name"/>
+    </div>
+    <div class="form-group">
+      <label>Price ($)</label>
+      <input type="number" id="uploadProductPrice" placeholder="0.00"/>
+    </div>
+    <div class="form-group">
+      <label>Category</label>
+      <select id="uploadProductCat">
+        <option value="electronics">Electronics</option>
+        <option value="fashion">Fashion</option>
+        <option value="home">Home</option>
+        <option value="sports">Sports</option>
+        <option value="books">Books</option>
+      </select>
+    </div>
+    <button class="btn-primary full" onclick="addUploadedProduct()">Add to Shop</button>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
