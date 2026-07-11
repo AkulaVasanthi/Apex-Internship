@@ -8,14 +8,14 @@ This repository contains the projects completed during my ApexPlanet AICTE Virtu
 Throughout the internship, I gained practical experience in building responsive and interactive web applications using modern frontend technologies. The internship focused on strengthening core web development skills through hands-on project-based learning.
 
 🛠️ Technologies Learned
-HTML5
-CSS3
-Tailwind CSS
-JavaScript (ES6)
-Responsive Web Design
-DOM Manipulation
-Form Validation
-Flexbox & CSS Grid
+-> HTML5
+-> CSS3
+-> Tailwind CSS
+-> JavaScript 
+-> Responsive Web Design
+-> DOM Manipulation
+-> Form Validation
+-> Flexbox & CSS Grid
 
 📂 Internship Tasks
 
