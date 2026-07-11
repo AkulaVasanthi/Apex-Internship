@@ -85,6 +85,7 @@ User-friendly navigation
 
 Tech Stack: HTML5, CSS3, Tailwind CSS, JavaScript
 
+
 Domain: Full Stack (Frontend Web Development)
 
 Internship Platform: AICTE Internship Portal
